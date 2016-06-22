@@ -768,9 +768,9 @@ public final class StandardTokenizerImpl {
       zzMarkedPos = zzMarkedPosL;
 
       switch (zzAction < 0 ? zzAction : ZZ_ACTION[zzAction]) {
-        case 1: 
-          { /* Break so we don't hit fall-through warning: */ break; /* Not numeric, word, ideographic, hiragana, or SE Asian -- ignore it. */
-          }
+        // case 1: 
+        //   { /* Break so we don't hit fall-through warning: */ break; /* Not numeric, word, ideographic, hiragana, or SE Asian -- ignore it. */
+        //   }
         case 9: break;
         case 2: 
           { return WORD_TYPE;
@@ -788,6 +788,7 @@ public final class StandardTokenizerImpl {
           { return KATAKANA_TYPE;
           }
         case 13: break;
+        case 1:
         case 6: 
           { return IDEOGRAPHIC_TYPE;
           }
