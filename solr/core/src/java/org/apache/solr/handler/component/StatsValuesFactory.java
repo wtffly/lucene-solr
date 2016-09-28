@@ -547,7 +547,7 @@ class NumericStatsValues extends AbstractStatsValues<Number> {
       if (null != min) {
         double minD = min.doubleValue();
         if (null == this.min || minD < this.minD) {
-          // Double for result & cached primitive doulbe to minimize unboxing in future comparisons
+          // Double for result & cached primitive double to minimize unboxing in future comparisons
           this.min = this.minD = minD;
         }
       }
@@ -556,7 +556,7 @@ class NumericStatsValues extends AbstractStatsValues<Number> {
       if (null != max) {
         double maxD = max.doubleValue();
         if (null == this.max || this.maxD < maxD) {
-          // Double for result & cached primitive doulbe to minimize unboxing in future comparisons
+          // Double for result & cached primitive double to minimize unboxing in future comparisons
           this.max = this.maxD = maxD;
         }
       }
@@ -751,7 +751,7 @@ class DateStatsValues extends AbstractStatsValues<Date> {
   public void updateTypeSpecificStats(Date v, int count) {
     long value = v.getTime();
     if (computeSumOfSquares) {
-      sumOfSquares += (value * value * count); // for std deviation
+      sumOfSquares += ((double)value * value * count); // for std deviation
     }
     if (computeSum) {
       sum += value * count;
@@ -807,7 +807,7 @@ class DateStatsValues extends AbstractStatsValues<Date> {
     if (count <= 1) {
       return 0.0D;
     }
-    return Math.sqrt(((count * sumOfSquares) - (sum * sum))
+    return Math.sqrt(((count * sumOfSquares) - (sum * (double)sum))
         / (count * (count - 1.0D)));
   }
 }

@@ -20,11 +20,14 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DocValuesType;
 import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.MatchAllDocsQuery;
@@ -198,6 +201,7 @@ public class RealTimeGetComponent extends SearchComponent
        if (docid < 0) continue;
        Document luceneDocument = searcher.doc(docid, rsp.getReturnFields().getLuceneFieldNames());
        SolrDocument doc = toSolrDoc(luceneDocument,  core.getLatestSchema());
+       searcher.decorateDocValueFields(doc, docid, searcher.getNonStoredDVs(true));
        if( transformer != null ) {
          transformer.transform(doc, docid);
        }
@@ -280,7 +284,7 @@ public class RealTimeGetComponent extends SearchComponent
         if (docid < 0) return null;
         Document luceneDocument = searcher.doc(docid);
         sid = toSolrInputDocument(luceneDocument, core.getLatestSchema());
-        searcher.decorateDocValueFields(sid, docid, searcher.getNonStoredDVs(false));
+        searcher.decorateDocValueFields(sid, docid, searcher.getNonStoredDVsWithoutCopyTargets());
       }
     } finally {
       if (searcherHolder != null) {
@@ -348,8 +352,15 @@ public class RealTimeGetComponent extends SearchComponent
     // copy the stored fields only
     Document out = new Document();
     for (IndexableField f : doc.getFields()) {
-      if (f.fieldType().stored() ) {
+      if (f.fieldType().stored()) {
         out.add(f);
+      } else if (f.fieldType().docValuesType() != DocValuesType.NONE) {
+        SchemaField schemaField = schema.getFieldOrNull(f.name());
+        if (schemaField != null && !schemaField.stored() && schemaField.useDocValuesAsStored()) {
+          out.add(f);
+        }
+      } else {
+        log.debug("Don't know how to handle field " + f);
       }
     }
 
@@ -548,13 +559,14 @@ public class RealTimeGetComponent extends SearchComponent
     UpdateLog ulog = req.getCore().getUpdateHandler().getUpdateLog();
     if (ulog == null) return;
 
-    try (UpdateLog.RecentUpdates recentUpdates = ulog.getRecentUpdates()) {
-      rb.rsp.add("versions", recentUpdates.getVersions(nVersions));
-    }
-
     if (doFingerprint) {
       IndexFingerprint fingerprint = IndexFingerprint.getFingerprint(req.getCore(), Long.MAX_VALUE);
       rb.rsp.add("fingerprint", fingerprint.toObject());
+    }
+
+    try (UpdateLog.RecentUpdates recentUpdates = ulog.getRecentUpdates()) {
+      List<Long> versions = recentUpdates.getVersions(nVersions);
+      rb.rsp.add("versions", versions);
     }
   }
 
@@ -601,6 +613,18 @@ public class RealTimeGetComponent extends SearchComponent
 
     List<String> versions = StrUtils.splitSmart(versionsStr, ",", true);
 
+    // find fingerprint for max version for which updates are requested
+    boolean doFingerprint = params.getBool("fingerprint", false);
+    if (doFingerprint) {
+      String maxVersionForUpdate = Collections.min(versions, new Comparator<String>() {
+        @Override
+        public int compare(String s1, String s2) {
+          return PeerSync.absComparator.compare(Long.parseLong(s1), Long.parseLong(s2));
+        }
+      });
+      IndexFingerprint fingerprint = IndexFingerprint.getFingerprint(req.getCore(), Math.abs(Long.parseLong(maxVersionForUpdate)));
+      rb.rsp.add("fingerprint", fingerprint.toObject());
+    }
 
     List<Object> updates = new ArrayList<>(versions.size());
 

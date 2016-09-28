@@ -1640,7 +1640,7 @@ public class SolrCLI {
       String systemInfoUrl = solrUrl+"admin/info/system";
       CloseableHttpClient httpClient = getHttpClient();
 
-      Tool tool = null;
+      ToolBase tool = null;
       try {
         Map<String, Object> systemInfo = getJson(httpClient, systemInfoUrl, 2, true);
         if ("solrcloud".equals(systemInfo.get("mode"))) {
@@ -1648,7 +1648,7 @@ public class SolrCLI {
         } else {
           tool = new CreateCoreTool(stdout);
         }
-        tool.runTool(cli);
+        tool.runImpl(cli);
       } finally {
         closeHttpClient(httpClient);
       }
@@ -2490,7 +2490,7 @@ public class SolrCLI {
       String solrHome = solrHomeDir.getAbsolutePath();
 
       // don't display a huge path for solr home if it is relative to the cwd
-      if (!isWindows && solrHome.startsWith(cwdPath))
+      if (!isWindows && cwdPath.length() > 1 && solrHome.startsWith(cwdPath))
         solrHome = solrHome.substring(cwdPath.length()+1);
 
       String startCmd =
@@ -2635,14 +2635,13 @@ public class SolrCLI {
             "How many replicas per shard would you like to create? [2] ", "a replication factor", 2, 1, 4);
 
         echo("Please choose a configuration for the "+collectionName+" collection, available options are:");
-        cloudConfig =
-            prompt(readInput, "basic_configs, data_driven_schema_configs, sample_techproducts_configs, or managed_schema_configs ["+cloudConfig+"] ", cloudConfig);
+        String validConfigs = "basic_configs, data_driven_schema_configs, or sample_techproducts_configs ["+cloudConfig+"] ";
+        cloudConfig = prompt(readInput, validConfigs, cloudConfig);
 
         // validate the cloudConfig name
         while (!isValidConfig(configsetsDir, cloudConfig)) {
           echo(cloudConfig+" is not a valid configuration directory! Please choose a configuration for the "+collectionName+" collection, available options are:");
-          cloudConfig =
-              prompt(readInput, "basic_configs, data_driven_schema_configs, sample_techproducts_configs, or managed_schema_configs ["+cloudConfig+"] ", cloudConfig);
+          cloudConfig = prompt(readInput, validConfigs, cloudConfig);
         }
       } else {
         // must verify if default collection exists

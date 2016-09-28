@@ -151,6 +151,7 @@ public class Overseer implements Closeable {
             continue; // not a no, not a yes, try ask again
           }
 
+          //TODO consider removing 'refreshClusterState' and simply check if clusterState is null
           if (refreshClusterState) {
             try {
               reader.updateClusterState();
@@ -658,7 +659,7 @@ public class Overseer implements Closeable {
       }
     }
 
-    // Go through the list of presently-hosted proeprties and remove any that have too many replicas that host the property
+    // Go through the list of presently-hosted properties and remove any that have too many replicas that host the property
     private void removeOverallocatedReplicas() {
       tmpMaxPropPerNode = origMaxPropPerNode; // A bit clumsy, but don't want to duplicate code.
       tmpModulo = origModulo;
@@ -912,19 +913,19 @@ public class Overseer implements Closeable {
   /* Internal map for failed tasks, not to be used outside of the Overseer */
   static DistributedMap getRunningMap(final SolrZkClient zkClient) {
     createOverseerNode(zkClient);
-    return new DistributedMap(zkClient, "/overseer/collection-map-running", null);
+    return new DistributedMap(zkClient, "/overseer/collection-map-running");
   }
 
   /* Size-limited map for successfully completed tasks*/
   static DistributedMap getCompletedMap(final SolrZkClient zkClient) {
     createOverseerNode(zkClient);
-    return new SizeLimitedDistributedMap(zkClient, "/overseer/collection-map-completed", null, NUM_RESPONSES_TO_STORE);
+    return new SizeLimitedDistributedMap(zkClient, "/overseer/collection-map-completed", NUM_RESPONSES_TO_STORE);
   }
 
   /* Map for failed tasks, not to be used outside of the Overseer */
   static DistributedMap getFailureMap(final SolrZkClient zkClient) {
     createOverseerNode(zkClient);
-    return new SizeLimitedDistributedMap(zkClient, "/overseer/collection-map-failure", null, NUM_RESPONSES_TO_STORE);
+    return new SizeLimitedDistributedMap(zkClient, "/overseer/collection-map-failure", NUM_RESPONSES_TO_STORE);
   }
   
   /* Collection creation queue */
